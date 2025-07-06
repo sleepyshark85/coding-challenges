@@ -1,0 +1,6 @@
+@Elsa.QuizSocket_HostAddress = http://localhost:5129
+
+GET {{Elsa.QuizSocket_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

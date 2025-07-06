@@ -1,0 +1,87 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: quiz_postgres
+    environment:
+      POSTGRES_DB: QuizApplication
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - quiz_network
+
+  # http://localhost:8080/?pgsql=quiz_postgres&username=postgres
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    networks:
+      - quiz_network
+
+  redis:
+    image: redis:7
+    container_name: quiz_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - quiz_network
+
+  # http://localhost:5540/
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - '5540:5540'
+    volumes:
+      - redisinsight_data:/db
+    depends_on:
+      - redis
+    networks:
+      - quiz_network
+
+  # http://localhost:5001/
+  quiz-api:
+    build: 
+      context: .
+      dockerfile: src/Elsa.QuizAPI/Dockerfile
+    container_name: quiz_api
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=QuizApplication;Username=postgres;Password=dev_password
+      - ConnectionStrings__Redis=redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - quiz_network
+
+  # http://localhost:5002/
+  quizsocket-service:
+    build:
+      context: .
+      dockerfile: src/Elsa.QuizSocket/Dockerfile
+    container_name: quizsocket_service
+    ports:
+      - "5002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Redis=redis:6379
+    depends_on:
+      - redis
+    networks:
+      - quiz_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  redisinsight_data:
+
+networks:
+  quiz_network:
+    driver: bridge
